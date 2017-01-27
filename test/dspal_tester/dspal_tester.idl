@@ -37,6 +37,7 @@
 
 interface dspal_tester
 {
+   long spi_bug_test();
    typedef sequence<octet, 1024> dataBuffer;
    long spi_relay_open(in long device);
    long spi_relay_configure(in long fd, in long clock);
