@@ -35,27 +35,10 @@ include_directories(
 
 QURT_BUNDLE(APP_NAME dspal_tester
 	DSP_SOURCES
-		adsp_proc/farf_test.c
-		adsp_proc/gpio_test_imp.c
-		adsp_proc/i2c_test_imp.c
-		adsp_proc/pwm_test_imp.c
-		adsp_proc/posix_file_tests.c
-		adsp_proc/posix_pthread_tests.c
-		adsp_proc/posix_semaphore_tests.c
-		adsp_proc/posix_time_tests.c
-		adsp_proc/serial_test_imp.c
-		adsp_proc/termios_test_imp.c
-		adsp_proc/spi_test_imp.c
-		adsp_proc/cxx_tests.cpp
-		adsp_proc/misc_tests.c
-		adsp_proc/qurt_stubs.cpp
+        adsp_proc/spi_bug_test_imp.c
 		common/test_utils.c
 	APPS_SOURCES
 		apps_proc/dspal_tester_main.c
-		apps_proc/io_test_suite.c
-		apps_proc/io_test_suite.h
-		apps_proc/posix_test_suite.c
-		apps_proc/posix_test_suite.h
 		common/test_utils.c
 	APPS_INCS
 		include

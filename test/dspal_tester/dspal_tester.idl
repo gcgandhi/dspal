@@ -37,74 +37,10 @@
 
 interface dspal_tester
 {
-   long test_dspal_get_version_info();
-   long test_clockid();
-   long test_sigevent();
-   long test_time();
-   long test_timer_realtime_sig_none();
-   long test_timer_monotonic_sig_none();
-   long test_timer_process_cputime_sig_none();
-   long test_timer_thread_cputime_sig_none();
-   long test_time_return_value();
-   long test_time_param();
-   long test_usleep();
-   long test_clock_getres();
-   long test_clock_gettime();
-   long test_clock_settime();
-   long test_one_shot_timer_cb();
-   long test_periodic_timer_cb();
-   long test_periodic_timer_signal_cb();
-   long test_periodic_timer_sigwait();
-
-   long test_pthread_attr_init();
-   long test_pthread_create();
-   long test_pthread_cancel();
-   long test_pthread_self();
-   long test_pthread_exit();
-   long test_pthread_kill();
-   long test_pthread_mutex_lock();
-   long test_pthread_mutex_lock_thread();
-   long test_pthread_stack();
-   long test_pthread_heap();
-   long test_pthread_cond_timedwait();
-
-   long test_semaphore_wait();
-
-   long test_posix_file_open_close();
-   long test_posix_file_read_write();
-   long test_posix_file_threading();
-   long test_posix_file_open_trunc();
-   long test_posix_file_open_append();
-   long test_posix_file_ioctl();
-   long test_posix_file_remove();
-   long test_posix_file_fsync();
-   long test_fopen_fclose();
-   long test_fwrite_fread();
-
-   long spi_test();
-
-   long serial_test();
-
-   long i2c_test();
-   
-   long pwm_test();
-
-   long test_farf_log_info();
-   long test_farf_log_err();
-   long test_farf_log_debug();
-
-   long test_gpio_open_close();
-   long test_gpio_ioctl_io();
-   long test_gpio_read_write();
-   long test_gpio_read_write_extern_loopback();
-   long test_gpio_int();
-
-   long test_cxx_heap();
-   long test_cxx_static();
-   long test_malloc();
-
-   long termios_test();
-
-   long test_rpcmem(inrout sequence<octet> data);
+   typedef sequence<octet, 1024> dataBuffer;
+   long spi_relay_open(in long device);
+   long spi_relay_configure(in long fd, in long clock);
+   long spi_relay_read_write(in long fd, in dataBuffer write_data, rout dataBuffer read_data);
+   long spi_relay_close(in long fd);
 };
 
