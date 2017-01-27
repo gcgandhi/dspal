@@ -54,22 +54,23 @@ int main(int argc, char *argv[])
 	int ii;
 
 	// Bug occurs if this is taken off the stack as well
-	const unsigned char write_data[] = {1,2,3,4,5,6,7,8,9,10};
-	unsigned char read_data[] = {0,0,0,0,0,0,0,0,0,0};
+	// Issue occurs more often with larger buffer sizes it seems
+	const unsigned char write_data[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,28,19,20,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,28,19,20};
+	unsigned char read_data[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 	// Open, configure, write data, then close:
 	// Note, cannot easily reproduce the bug by doing this in a loop.  Easier just to run this
 	// test multiple times.  Typically happens w/in 30 tries.
 	int fd = dspal_tester_spi_relay_open(8); // device 8
 	int res = dspal_tester_spi_relay_configure(fd,1000000); // 1 Mhz
-	res = dspal_tester_spi_relay_read_write(fd, write_data, 10, read_data, 10);
+	res = dspal_tester_spi_relay_read_write(fd, write_data, 40, read_data, 40);
 	res = dspal_tester_spi_relay_close(fd);
 
 	// Print write buffer and alert if corrupted:
 	// Note, that when the data is corrupted, the passed buffer on the DSP has the correct contents,
 	// but the buffer on the APP side SOMETIMES has the corrupted data.
 	printf("Write buffer: \n");
-	for (ii = 0; ii < 10; ++ii) {
+	for (ii = 0; ii < 40; ++ii) {
 		printf("%i ",write_data[ii]);
 	}
 	printf("\n");
