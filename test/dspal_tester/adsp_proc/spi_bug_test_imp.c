@@ -45,6 +45,9 @@
 #include <sys/time.h>
 
 
+static unsigned char write_data[DSPAL_SPI_TRANSMIT_BUFFER_LENGTH];// = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,28,19,20,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,28,19,20};
+static unsigned char read_data[DSPAL_SPI_TRANSMIT_BUFFER_LENGTH];
+
 int dspal_tester_spi_relay_open(int device) {
 
     int fd;
@@ -223,16 +226,25 @@ int dspal_spi_bug_test(void)
 {
 
 	int result = SUCCESS;
+
 	// Issue occurs more often with larger buffer sizes it seems
-	const unsigned char write_data[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,28,19,20,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,28,19,20};
-	unsigned char read_data[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+	const int size = DSPAL_SPI_TRANSMIT_BUFFER_LENGTH;
+//	unsigned char write_data[size];// = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,28,19,20,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,28,19,20};
+//	unsigned char read_data[size];
+
+	for(int i = 0; i < size; ++i) {
+		write_data[i] = (i+1)%10;
+	}
 
 	// Open, configure, write data, then close:
 	// Note, cannot easily reproduce the bug by doing this in a loop.  Easier just to run this
 	// test multiple times.  Typically happens w/in 30 tries.
 	int fd = dspal_tester_spi_relay_open(8); // device 8
 	int res = dspal_tester_spi_relay_configure(fd,1000000); // 1 Mhz
-	res = dspal_tester_spi_relay_read_write(fd, write_data, 40, read_data, 40);
+
+	usleep(1000000);
+
+	res = dspal_tester_spi_relay_read_write(fd, write_data, 19, read_data, 19);
 	res = dspal_tester_spi_relay_close(fd);
 
 	return result;

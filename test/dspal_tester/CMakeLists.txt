@@ -35,6 +35,7 @@ include_directories(
 
 QURT_BUNDLE(APP_NAME dspal_tester
 	DSP_SOURCES
+	    adsp_proc/uart_bug_test_imp.c
         adsp_proc/spi_bug_test_imp.c
 		common/test_utils.c
 	APPS_SOURCES

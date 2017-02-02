@@ -37,11 +37,23 @@
 
 interface dspal_tester
 {
-   long spi_bug_test();
+
    typedef sequence<octet, 1024> dataBuffer;
+
+   long spi_bug_test();
    long spi_relay_open(in long device);
    long spi_relay_configure(in long fd, in long clock);
    long spi_relay_read_write(in long fd, in dataBuffer write_data, rout dataBuffer read_data);
    long spi_relay_close(in long fd);
+
+   long uart_bug_test();
+   long uart_relay_open(in long device);
+   long uart_relay_configure(in long fd, in long device, in long baud, in long parity, in long bits, in long stop_bits);
+   long uart_relay_read(in long device, rout dataBuffer buff, rout long bytes);
+   // making buff inrout didnt help, so put it back to in
+   long uart_relay_write(in long fd, in long device, in dataBuffer buff);
+   long uart_relay_close(in long fd, in long device);
+   long uart_relay_quit(in long device);
+   long uart_receive_allocate(in long device, in long size);
 };
 
