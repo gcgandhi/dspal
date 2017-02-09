@@ -416,10 +416,13 @@ int dspal_tester_uart_relay_configure(int fd, int device, int baud, int parity,
     // save bit time in usec
     switch (baud) {
         case DSPAL_SIO_BITRATE_115200:
-            portBitTimes[device] = 0.0000086805556 * 1000000.0 * 8;
+            portBitTimes[device] = 0.0000086805556 * 1000000.0 * 10;
             break;
         case DSPAL_SIO_BITRATE_230400:
-            portBitTimes[device] = 0.0000043402778 * 1000000.0 * 8;
+            portBitTimes[device] = 0.0000043402778 * 1000000.0 * 10;
+            break;
+        case DSPAL_SIO_BITRATE_921600:
+            portBitTimes[device] = 0.0000010850694 * 1000000.0 * 10;
             break;
         default:
             return ERROR;
@@ -570,13 +573,14 @@ int dspal_tester_uart_relay_read(int device, unsigned char* buff, int buffLen,
 int dspal_tester_uart_relay_write(int fd, int device, const unsigned char* buff,
         int buffLen) {
 
+
     int written = write(fd, buff, buffLen);
 
     if (written != buffLen) {
         LOG_ERR("UART %d write error: %d %d", fd, buffLen, written);
         return -1;
     } else {
-        LOG_INFO("UART %d written %d bytes successfully.", fd, written);
+        //LOG_INFO("UART %d written %d bytes successfully.", fd, written);
     }
 #if 0
     LOG_INFO("Drain");
@@ -587,9 +591,17 @@ int dspal_tester_uart_relay_write(int fd, int device, const unsigned char* buff,
     }
 #elif 1
     float delay = (float) (buffLen) * portBitTimes[device];
-    LOG_INFO("Delay: %f", delay);
+    //LOG_INFO("Delay: %f", delay);
     // delay to allow transmission
+
+//    struct timespec stime_init;
+//   	clock_gettime(CLOCK_REALTIME, &stime_init);
     usleep(delay);
+//    struct timespec stime_after;
+//    clock_gettime(CLOCK_REALTIME, &stime_after);
+//	LOG_INFO("<<< delay: diff.s: %d, diff.ns: %d",
+//			stime_after.tv_sec - stime_init.tv_sec,
+//			stime_after.tv_nsec - stime_init.tv_nsec);
 #endif
     return 0;
 

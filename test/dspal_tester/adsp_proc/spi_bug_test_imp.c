@@ -77,7 +77,10 @@ int dspal_tester_spi_relay_read_write(int fd, const unsigned char* write_data, i
 	read_write.write_buffer = (void*) write_data;
 	read_write.write_buffer_length = write_dataLen;
 
+	int result;
 	unsigned int byte;
+
+#if 1
     for (byte = 0; byte < read_write.read_buffer_length; byte++) {
     	read_data[byte] = 0xA5;
     }
@@ -91,7 +94,7 @@ int dspal_tester_spi_relay_read_write(int fd, const unsigned char* write_data, i
 		.rx_data_callback = 0,
 	};
 
-	int result = ioctl(fd, SPI_IOCTL_SET_OPTIONS, &options);
+	result = ioctl(fd, SPI_IOCTL_SET_OPTIONS, &options);
 
 	if (result < SUCCESS) {
 		LOG_ERR("SPI %d slave set 1 error! %d: %s",fd,errno,strerror(errno));
@@ -110,6 +113,7 @@ int dspal_tester_spi_relay_read_write(int fd, const unsigned char* write_data, i
         LOG_ERR("ioctl SPI SET MODE 1 fd %d failed. %d: %s",fd,errno,strerror(errno));
         return errno;
     }
+#endif
 
     // Finally, we can write:
     LOG_INFO("Writing %d bytes to SPI",read_write.write_buffer_length);
@@ -121,6 +125,7 @@ int dspal_tester_spi_relay_read_write(int fd, const unsigned char* write_data, i
 		return errno;
 	}
 
+#if 1
 	// Once again to get the desired chip select behavior after writing:
 	options.slave_address = 1;
 
@@ -136,6 +141,7 @@ int dspal_tester_spi_relay_read_write(int fd, const unsigned char* write_data, i
         LOG_ERR("ioctl SPI SET MODE 2 fd %d failed. %d: %s",fd,errno,strerror(errno));
         return errno;
     }
+#endif
 
 #if 1
 	LOG_INFO("SPI: ");
@@ -152,6 +158,25 @@ int dspal_tester_spi_relay_read_write(int fd, const unsigned char* write_data, i
 }
 
 int dspal_tester_spi_relay_configure(int fd, int clock) {
+
+	int result;
+
+#if 0
+	// Updating the slave address to get the desired chip select behavior:
+	struct dspal_spi_ioctl_set_options options = {
+		.slave_address = 1,
+		.is_tx_data_synchronous = 0,
+		.tx_data_callback = 0,
+		.rx_data_callback = 0,
+	};
+
+	result = ioctl(fd, SPI_IOCTL_SET_OPTIONS, &options);
+
+	if (result < SUCCESS) {
+		LOG_ERR("SPI %d slave set error! %d: %s",fd,errno,strerror(errno));
+		return errno;
+	}
+#endif
 
     struct dspal_spi_ioctl_set_bus_frequency rate = {
             .bus_frequency_in_hz = clock
@@ -183,7 +208,7 @@ int dspal_tester_spi_relay_configure(int fd, int clock) {
 
 	loopback.state = SPI_LOOPBACK_STATE_DISABLED;
 
-	int result = ioctl(fd, SPI_IOCTL_LOOPBACK_TEST, &loopback);
+	result = ioctl(fd, SPI_IOCTL_LOOPBACK_TEST, &loopback);
 
 	if (result < SUCCESS) {
 		LOG_ERR("error: unable to activate spi %d loopback mode. %d: %s",fd,errno,strerror(errno));
@@ -192,6 +217,7 @@ int dspal_tester_spi_relay_configure(int fd, int clock) {
 		LOG_INFO("%s SPI loopback mode",loopback.state == SPI_LOOPBACK_STATE_DISABLED?"Disabled":"Enabled");
 	}
 
+#if 1
 	// Updating the slave address to get the desired chip select behavior:
 	struct dspal_spi_ioctl_set_options options = {
 		.slave_address = 1,
@@ -206,6 +232,7 @@ int dspal_tester_spi_relay_configure(int fd, int clock) {
 		LOG_ERR("SPI %d slave set error! %d: %s",fd,errno,strerror(errno));
 		return errno;
 	}
+#endif
 
 	return SUCCESS;
 }

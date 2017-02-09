@@ -37,6 +37,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <getopt.h>
+#include <time.h>
 
 #include "adspmsgd.h"
 #include "rpcmem.h"
@@ -83,11 +84,13 @@ enum DspUartRates {
     UART_BITRATE_4000000              /**< 4000000 bit-rate  */
 };
 
+static unsigned char buffer_gbl[512*1024]; // Garbage data
+
 void spi_bug_test_main()
 {
 
 	// Bug occurs both if sending from APP or DSP side:
-#if 0
+#if 1
 	LOG_INFO("Sending SPI Data from APP");
 
 	// Bug occurs if this is taken off the stack as well
@@ -100,7 +103,10 @@ void spi_bug_test_main()
 	// test multiple times.  Typically happens w/in 30 tries.
 	int fd = dspal_tester_spi_relay_open(8); // device 8
 	int res = dspal_tester_spi_relay_configure(fd,1000000); // 1 Mhz
+	// Bug doesnt occur if I dont write
+#if 1
 	res = dspal_tester_spi_relay_read_write(fd, write_data, 40, read_data, 40);
+#endif
 	res = dspal_tester_spi_relay_close(fd);
 #else
 	LOG_INFO("Sending SPI Data from DSP");
@@ -127,10 +133,11 @@ void uart_bug_test_main()
 	// Open, configure:
 	int device = 2;
 	int fd = dspal_tester_uart_relay_open(device);
-	int res = dspal_tester_uart_relay_configure(fd,device,UART_BITRATE_115200,0,0,0); // 115K baud
+	// Problem occurs regardless of bit rate:
+	int res = dspal_tester_uart_relay_configure(fd,device,UART_BITRATE_230400,0,0,0); // 115K baud
 
 	// Write in 256 bytes chunks:
-	const int xferSize = 512*1024;  // 512 KB, which is what we are trying to send
+	const int xferSize = 4*512*1024;  // 512 KB, which is what we are trying to send
 	const int WRITE_BUFF_SIZE = 256; // Increasing/decreasing this size doesnt fix the issue
 	unsigned char buffer[xferSize]; // Garbage data
 	unsigned char* data;
@@ -143,12 +150,12 @@ void uart_bug_test_main()
 		// Using heap of default or 22 didnt make a difference
 		// Using flags of UNCACHED or DEFAULT didnt make a difference
 		data_rpc = (unsigned char*)rpcmem_alloc(RPCMEM_DEFAULT_HEAP, RPCMEM_FLAG_UNCACHED, xferSize);
-		memcpy(data_rpc, buffer, xferSize);
+		memcpy(data_rpc, buffer_gbl /*buffer*/, xferSize);
 		data = data_rpc;
 	}
 	// Without rpcmem:
 	else {
-		data = buffer;
+		data = buffer_gbl; //buffer;
 	}
 
 	int chunk;
@@ -157,21 +164,27 @@ void uart_bug_test_main()
 	// Bug is seen when uart writes return bad status....
 	LOG_INFO("Writing a total of %d bytes", xferSize);
 
-    for (chunk = 0; chunk < xferSize; chunk+=WRITE_BUFF_SIZE) {
+	int ii = 0;
+	for (ii = 0; ii < 3; ++ii) {
 
-    	printf("iter=%d, chunk=%d \n", ++iter, chunk);
-    	int left = xferSize - chunk;
-        int thisSize = WRITE_BUFF_SIZE < left ? WRITE_BUFF_SIZE : left;
-        int stat = dspal_tester_uart_relay_write(fd,device,data,thisSize);
-        if (stat == -1) {
-        	LOG_ERR("BAD UART WRITE!!!!\n");
-        	break;
-        }
-        data += chunk;
+		for (chunk = 0; chunk < xferSize; chunk+=WRITE_BUFF_SIZE) {
 
-        // Even with the 1 sec delay, the bug still occurs.
-        //usleep(1000000); // 1 sec delay
-    }
+			//printf("iter=%d, chunk=%d \n", ++iter, chunk);
+			int left = xferSize - chunk;
+			int thisSize = WRITE_BUFF_SIZE < left ? WRITE_BUFF_SIZE : left;
+
+			int stat = dspal_tester_uart_relay_write(fd,device,data+chunk,thisSize);
+			if (stat == -1) {
+				LOG_ERR("BAD UART WRITE (iter=%d, chunk=%d)!!!!\n", iter, chunk);
+				break;
+			}
+			//data += chunk; // TODO bug
+			iter++;
+
+			// Even with the 1 sec delay, the bug still occurs.
+			//usleep(1000000); // 1 sec delay
+		}
+	}
 
 	// Close:
     if (use_rpcmem) {
@@ -185,11 +198,11 @@ void uart_bug_test_main()
 
 void uart_stress_test()
 {
+
 	/*
 	 * Simulate NAV to FC communication
 	 * 1 Mbps baud rate, 128 bytes, 2 ms period, sleep 2/3 ms
 	 *
-	 * Hits the bug about 20 times in 100000 iterations
 	 */
 	LOG_INFO("UART stress test");
 
@@ -198,44 +211,73 @@ void uart_stress_test()
 	int fd = dspal_tester_uart_relay_open(device);
 	int res = dspal_tester_uart_relay_configure(fd,device,UART_BITRATE_921600,0,0,0); // 115K baud
 
+	int device2 = 3;
+	int fd2 = dspal_tester_uart_relay_open(device2);
+	int res2 = dspal_tester_uart_relay_configure(fd2,device2,UART_BITRATE_921600,0,0,0); // 115K baud
+
 	// Write in 128 bytes chunks:
-	const int xferSize = 128;  // 5 KB
-	const int WRITE_BUFF_SIZE = 128; // Increasing/decreasing this size doesnt fix the issue
+	const int xferSize = 124;  // 5 KB
+	const int WRITE_BUFF_SIZE = 256;
 	unsigned char buffer[xferSize]; // Garbage data
 	unsigned char* data;
 	unsigned char* data_rpc;
 
 	rpcmem_init();
-	// Using heap of default or 22 didnt make a difference
-	// Using flags of UNCACHED or DEFAULT didnt make a difference
 	data_rpc = (unsigned char*)rpcmem_alloc(RPCMEM_DEFAULT_HEAP, RPCMEM_FLAG_UNCACHED, xferSize);
 	memcpy(data_rpc, buffer, xferSize);
 
-	// With no delay this eventually hits the gbug at around 8 iterations of 5 KB buffers
-	// With 1 sec delay was able to write 50 KB total of data
 	int i;
-	for (i = 0; i < 100000; ++i) {
+	for (i = 0; i < 10; ++i) {
 
 		int chunk;
 		int iter = 0;
 		data = data_rpc;
 
-		// Bug is seen when uart writes return bad status....
-		//LOG_INFO("Writing a total of %d bytes (iter: %d)", xferSize, i);
-
 		for (chunk = 0; chunk < xferSize; chunk+=WRITE_BUFF_SIZE) {
 
 			int left = xferSize - chunk;
 			int thisSize = WRITE_BUFF_SIZE < left ? WRITE_BUFF_SIZE : left;
+
+#if 1
+	        struct timespec stime_init;
+			clock_gettime(CLOCK_REALTIME, &stime_init);
+
 			int stat = dspal_tester_uart_relay_write(fd,device,data,thisSize);
+
+		    struct timespec stime_after;
+			clock_gettime(CLOCK_REALTIME, &stime_after);
+
+//			LOG_INFO("<<< init.ns: %d, init:s: %d, after.ns: %d, after.s: %d",
+//					 stime_init.tv_nsec, stime_init.tv_sec,
+//					 stime_after.tv_nsec, stime_after.tv_sec);
+			LOG_INFO("<<< diff.s: %d, diff.ns: %d",
+					stime_after.tv_sec - stime_init.tv_sec,
+					stime_after.tv_nsec - stime_init.tv_nsec);
+
+#else
+			int stat = dspal_tester_uart_relay_write(fd,device,data,thisSize);
+#endif
+
 			if (stat == -1) {
-				LOG_ERR("BAD UART WRITE (iter: %d)!!!!\n", i);
+				LOG_ERR("BAD UART1 WRITE (iter: %d)!!!!\n", i);
 				break;
 			}
+
+#if 0
+			stat = dspal_tester_uart_relay_write(fd2,device2,data,thisSize);
+			if (stat == -1) {
+				LOG_ERR("BAD UART2 WRITE (iter: %d)!!!!\n", i);
+				break;
+			}
+#endif
 			data += chunk;
 		}
 
-        usleep(666); // 666 usec delay
+#if 0
+		spi_bug_test_main();
+#endif
+
+        //usleep(389); // delay
 
 	}
 
@@ -247,15 +289,19 @@ void uart_stress_test()
 int main(int argc, char *argv[])
 {
 
-#if 1
+	// Stress test performs w/ no issues
+#if 0
 	uart_stress_test();
 #endif
 
-//#if 1
-//	uart_bug_test_main();
-//#else
-//	spi_bug_test_main();
-//#endif
+	// UART bug is now fixed
+#if 0
+	uart_bug_test_main();
+#endif
+
+#if 1
+	spi_bug_test_main();
+#endif
 
 	return 0;
 }
